@@ -1,0 +1,24 @@
+{
+  "name": "koc-langgraph-agent-app",
+  "private": true,
+  "workspaces": [
+    "apps/desktop",
+    "apps/server"
+  ],
+  "scripts": {
+    "setup": "python -m venv .venv && .\\.venv\\Scripts\\python.exe -m pip install -r requirements.txt && npm install",
+    "dev": "concurrently \"powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run_backend.ps1\" \"npm --workspace apps/server run dev\" \"npm --workspace apps/desktop run tauri dev\"",
+    "dev:koc": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run_backend.ps1",
+    "dev:server": "npm --workspace apps/server run dev",
+    "dev:desktop": "npm --workspace apps/desktop run tauri dev",
+    "db:init": ".\\.venv\\Scripts\\python.exe scripts/init_database.py",
+    "build:server": "npm --workspace apps/server run build",
+    "build:desktop": "npm --workspace apps/desktop run tauri build",
+    "build": "npm run build:server && npm --workspace apps/desktop run build",
+    "self-check": ".\\.venv\\Scripts\\python.exe scripts/self_check.py"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.10.1",
+    "concurrently": "^7.6.0"
+  }
+}

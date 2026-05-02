@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": [
+    "src/index.ts",
+    "src/config.ts",
+    "src/embeddings.ts",
+    "src/experiment-review.ts",
+    "src/koc-memory.ts",
+    "src/koc-memory-repository.ts",
+    "src/koc-growth.ts",
+    "src/media-analysis.ts",
+    "src/platform-connectors.ts",
+    "src/storage.ts",
+    "src/types.ts",
+    "src/window-monitor.ts"
+  ]
+}
