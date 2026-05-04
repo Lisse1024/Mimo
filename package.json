@@ -1,5 +1,5 @@
 {
-  "name": "koc-langgraph-agent-app",
+  "name": "mimo",
   "private": true,
   "workspaces": [
     "apps/desktop",

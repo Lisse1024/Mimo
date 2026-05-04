@@ -1,279 +1,220 @@
-# KOC LangGraph Agent 项目说明文档
+# Mimo Product Description
 
-> 文档用途：项目路演、参赛材料、产品评审或 PDF 导出  
-> 项目定位：面向 KOC / 达人的内容增长决策 Agent  
-> 核心闭环：证据 -> 判断 -> 动作 -> 验证指标 -> 复盘回填
+> Format: competition / demo / product review document  
+> Product: Mimo, an evidence-driven KOC growth agent  
+> Output loop: evidence -> judgment -> action -> validation metrics -> review
 
 ---
 
-## 封面页
+## Cover Page
 
-| 栏目 | 填写内容 |
+| Field | Content |
 | --- | --- |
-| 作品名称 | KOC LangGraph Agent：面向达人创作者的内容增长决策智能体 |
-| 参赛赛道 | AI 原生应用 / Agent 应用 / 创作者工具 / 内容增长工具 |
-| 选手姓名 | 待填写 |
-| Demo 链接 | 待填写：桌面端 Demo 地址、演示视频或可访问仓库链接 |
+| Product name | Mimo: Evidence-Driven KOC Growth Agent |
+| Track | AI-native application / Agent application / Creator tool / Content growth tool |
+| Participant | To be filled |
+| Demo link | To be filled: GitHub release, demo video, or live repository |
 
 ---
 
-## 模块一：用户洞察与问题定义
+## Module 1: User Insight and Problem Definition
 
-### 1.1 目标用户
+### Target Users
 
-本项目面向有持续内容发布需求的 KOC、达人、内容运营者、MCN 编导和个人创作者，尤其适合以下人群：
+Mimo is built for KOC creators, short-form video creators, content operators, and small creator teams who need to make content decisions from real material instead of generic advice.
 
-- 正在运营短视频账号，但不知道下一条内容该如何优化的创作者。
-- 有截图、录屏、作品链接、主页截图或后台数据，但缺少结构化复盘方法的 KOC。
-- 需要将“单条视频分析”转化为“下一条内容实验”的内容运营人员。
-- 需要对账号主页、单条作品、发布数据进行持续复盘的轻量团队。
+Typical users include:
 
-### 1.2 用户痛点
+- creators who publish short videos regularly but are unsure how to improve the next post;
+- operators who have screenshots, recordings, titles, tags, homepage screenshots, or visible metrics but lack a structured analysis workflow;
+- creators who need to diagnose a single video or a homepage without exposing private platform credentials;
+- judges or reviewers who need to inspect how an AI agent handles evidence, uncertainty, and practical growth actions.
 
-创作者在真实增长过程中遇到的问题，通常不是“不会写一段视频解说”，而是缺少一个能基于证据做决策的工作流：
+### User Pain Points
 
-- **证据混乱**：截图、录屏、标题、字幕、后台指标、评论反馈和用户口述混在一起，难以判断哪些是事实、哪些只是推断。
-- **建议泛化**：常见工具容易输出固定短视频模板，例如“0-3 秒冲突、4-12 秒背景、13-25 秒爆点”，但没有绑定当前素材。
-- **过度判断**：没有后台数据时仍声称“数据证明会涨粉”；没有评论截图时仍写“评论区都在说”。
-- **复盘断裂**：发布后数据没有回填到历史记忆中，下一轮诊断无法引用上次实验结果。
-- **内容风险不可见**：影视、综艺、音乐翻唱、二创片段等素材容易忽略版权、授权和引用边界。
-- **主页与单条混淆**：账号主页诊断需要看栏目结构和主页承接，单条作品分析需要看素材钩子和脚本实验，两者不能混用模板。
+Creators often do not need another generic copywriting assistant. They need an agent that can reason from current evidence and avoid overclaiming.
 
-### 1.3 使用场景
+Key pain points:
 
-1. **分析当前视频**  
-   用户上传或录制当前刷到的视频，Agent 抽取画面、字幕、标题、标签、可听信息和可见互动数据，输出内容类型、核心看点、脚本建议和验证指标。
+- **Evidence is scattered**: screenshots, recordings, subtitles, titles, visible metrics, browser clues, and user notes are hard to separate.
+- **Advice is often generic**: many tools return fixed short-video formulas that do not use the current material.
+- **Claims are easily overstated**: without backend metrics or comments, tools may still imply that a direction has already been validated.
+- **Homepage and single-video analysis are often mixed**: a homepage needs column-level diagnosis; a single video needs material-level script testing.
+- **Content usage boundaries are unclear**: film, variety, music, performance, and derivative materials need conservative usage guidance.
+- **Internal tool information may pollute strategy**: file names, upload logs, connector state, or runtime errors must not become content evidence.
 
-2. **诊断账号主页**  
-   用户提供主页截图或主页链接，Agent 识别账号简介、作品矩阵、封面标题、可见播放量、内容模式和缺失数据，输出栏目实验建议。
+### Use Cases
 
-3. **发布后复盘**  
-   用户按上次建议发布内容后，回填播放量、3 秒留存、完播率、评论关键词、主页点击率、关注转化和负反馈，Agent 判断实验是否有效，并写入增长记忆。
+1. **Analyze the current video**  
+   Mimo reads authorized recordings, sampled frames, OCR/ASR text, titles, tags, and visible signals, then produces evidence-grounded script steps.
 
-4. **素材使用风险提示**  
-   当素材涉及影视、综艺、音乐、片段二创或他人作品时，Agent 不鼓励完整搬运，而是提示结构复用、评论性引用、授权素材、平台可用素材、截图讲解或口播复述。
+2. **Diagnose an account homepage**  
+   Mimo reads visible profile information, work titles, cover text, visible metrics, and content patterns, then suggests a focused column test plan.
+
+3. **Handle degraded visual analysis**  
+   When visual parsing fails, Mimo falls back to available evidence and clearly states what is missing instead of fabricating details.
+
+4. **Guide safe reuse of content structure**  
+   For derivative or copyrighted material, Mimo recommends reusable structure, commentary framing, screenshot explanation, authorized material, or platform-available assets.
 
 ---
 
-## 模块二：产品方案设计
+## Module 2: Product Solution Design
 
-### 2.1 产品概述
+### Product Overview
 
-KOC LangGraph Agent 是一个桌面端创作者增长决策智能体。它不是普通聊天机器人，也不是单纯的视频解说工具，而是围绕内容增长实验构建的多模态 Agent 系统。
+Mimo is a desktop AI agent for evidence-driven content growth decisions. It is not a normal chatbot and not a video narration tool.
 
-系统接收用户授权的截图、录屏、视频抽帧、OCR / ASR、标题标签、浏览器可见线索、用户输入和历史增长记忆，最终输出：
+The product turns authorized materials into a structured decision loop:
 
 ```text
-证据 -> 判断 -> 动作 -> 验证指标 -> 复盘回填
+evidence -> judgment -> action -> validation metrics -> review
 ```
 
-### 2.2 核心功能
+### Core Features
 
-| 功能 | 说明 |
+| Feature | Description |
 | --- | --- |
-| 桌面端素材采集 | 通过 Tauri + React 桌面端采集截图、录屏、上传素材和用户指令。 |
-| 单条作品分析 | 生成 `fact_ledger`，区分可见事实、可听事实、文本事实、内容类型、增长钩子和限制项。 |
-| 主页诊断 | 生成 `homepage_evidence_map`，只用主页可见证据归纳内容模式和栏目方向。 |
-| 动态脚本生成 | 基于素材证据生成 `script_steps`，避免固定模板，每一步绑定具体证据和增长目的。 |
-| 证据契约 | 通过 `evidence_contract` 区分直接证据、推断判断、低置信判断、缺失证据和禁止结论。 |
-| 增长实验 | 输出增长假设、测试动作、验证指标、决策规则和复盘模板。 |
-| 复盘记忆 | 将用户回填指标、新主页截图摘要、实验判断和下一步动作写入增长记忆。 |
-| 最终回复中文化 | Node 层统一格式化、脱敏、去重和中文化，不暴露内部英文 key 或调试字段。 |
+| Desktop material capture | Uses a Tauri + React desktop app for screenshots, recordings, uploads, and the agent panel. |
+| Single-video analysis | Produces a `fact_ledger` with visible facts, audio facts, text facts, content type, hooks, and limitations. |
+| Homepage diagnosis | Produces a `homepage_evidence_map` from visible profile and work-grid evidence. |
+| Dynamic script steps | Uses `script_steps` tied to current evidence instead of fixed templates. |
+| Evidence contract | Separates direct evidence, inferred claims, low-confidence claims, missing evidence, and forbidden claims. |
+| Final reply guardrails | The Node gateway formats Chinese replies, removes internal keys, filters runtime metadata, and preserves evidence boundaries. |
+| Conservative fallback | If evidence is insufficient, Mimo asks for better material instead of inventing a column plan or script. |
 
-### 2.3 产品架构 / 功能图
+### Product Architecture
 
 ```text
-桌面端 apps/desktop
-  - 桌宠 UI
-  - 截图 / 录屏 / 上传素材
-  - Agent 面板展示
+Desktop app: apps/desktop
+  Tauri + React UI
+  screenshot / recording / upload / agent panel
         |
         v
-Node 网关 apps/server
-  - API 适配
-  - 媒体预处理
-  - 视频抽帧
-  - 最终中文回复组装
-  - 运行日志脱敏与证据边界保护
+Node gateway: apps/server
+  API adaptation
+  media preprocessing
+  frame extraction
+  final reply formatting
+  internal-field filtering
         |
         v
-Python 后端 koc_backend
-  - 模型调用
-  - 素材理解
-  - fact_ledger
-  - evidence_contract
-  - homepage_evidence_map
-  - homepage_column_plan
-  - 增长记忆持久化
+Python backend: koc_backend
+  model calls
+  OCR/ASR/vision enrichment
+  material understanding
+  evidence contracts
+  strategy generation
         |
         v
-LangGraph 工作流 koc_graph
-  intake -> platform -> assets -> evidence_snapshot
+LangGraph workflow: koc_graph
+  intake -> platform -> assets -> evidence snapshot
   -> decision -> strategy -> evidence -> persist
         |
         v
-本地数据 / 生产数据库
+Local and production data layer
   data/
   database/schema.sql
 ```
 
-### 2.4 交互流程
+### Interaction Flow
 
-1. 用户在桌面端点击“分析当前视频”或“诊断账号”。
-2. 桌面端采集截图、录屏、上传素材或可见页面信息。
-3. Node 网关完成媒体适配、抽帧和任务轮询。
-4. Python 后端进行 OCR / ASR / 视觉理解和结构化证据抽取。
-5. LangGraph 编排任务节点，生成素材事实账本、证据契约和策略结果。
-6. Node 最终回复层根据任务类型输出中文用户回复：
-   - 单条作品：有效结论、证据依据、当前问题、下一步动作、建议脚本、验证与复盘、证据边界。
-   - 主页诊断：有效结论、证据依据、当前问题、下一步动作、栏目测试方案、验证与复盘、证据边界。
-   - 实验复盘：上次实验结果、是否有效、下一步继续还是调整、证据边界。
-7. 用户发布内容后回填数据，Agent 将复盘结果写入增长记忆，用于下一轮诊断。
+1. The user chooses current-video analysis or homepage diagnosis.
+2. The desktop app collects authorized screenshots, recordings, uploads, and visible context.
+3. The Node gateway preprocesses media and forwards the task to the Python backend.
+4. The Python backend extracts structured evidence.
+5. The LangGraph workflow routes the task and creates a strategy.
+6. The Node gateway formats the final Chinese reply with evidence boundaries and guardrails.
+7. The user receives an actionable output with validation metrics and a review format.
 
-### 2.5 创新与差异化
+### Innovation and Differentiation
 
-| 对比项 | 普通聊天机器人 / 视频解说工具 | KOC LangGraph Agent |
-| --- | --- | --- |
-| 输出目标 | 生成回答或解说文案 | 形成增长实验闭环 |
-| 证据处理 | 容易混合事实和猜测 | 明确区分证据、推断、低置信和缺失项 |
-| 单条作品分析 | 套用通用短视频模板 | 基于当前素材生成动态脚本 |
-| 主页诊断 | 按垂类给固定 playbook | 基于主页可见证据生成栏目实验 |
-| 复盘能力 | 通常不记忆实验结果 | 回填指标写入增长记忆 |
-| 风险控制 | 容易夸大效果或忽略版权 | 内置禁止结论和素材使用边界 |
-
----
-
-## 模块三：AI 原生能力说明
-
-### 3.1 AI 核心能力
-
-项目使用 AI 能力完成多模态内容理解、证据结构化和增长策略生成：
-
-- **多模态理解**：理解截图、录屏抽帧、OCR 文本、ASR 文本、标题标签和浏览器可见线索。
-- **结构化事实账本**：将单条作品拆解为可见事实、可听事实、文本事实、内容类型、时间线、增长钩子和限制项。
-- **证据边界建模**：生成 `evidence_contract`，稳定区分直接证据、推断判断、低置信判断、缺失证据和禁止结论。
-- **任务类型分流**：区分单条作品分析、主页诊断和发布后复盘，避免主页诊断混入单条作品脚本模板。
-- **动态策略生成**：根据当前素材和主页证据生成具体实验动作，而不是按垂类或案例套模板。
-- **增长记忆**：将实验结果、指标变化、新主页截图摘要和下一步动作写入历史记忆。
-
-### 3.2 AI 如何解决痛点
-
-| 用户痛点 | AI 解决方式 |
+| Common tool | Mimo |
 | --- | --- |
-| 不知道哪些信息可信 | 用证据契约拆分直接证据、推断、低置信和缺失证据。 |
-| 建议过于模板化 | 脚本步骤必须引用当前素材证据，缺证据时降级为补证据建议。 |
-| 容易夸大结论 | forbidden_claims 禁止“后台数据证明”“一定会爆”“评论区都在说”等表达。 |
-| 单条和主页混淆 | 根据 task_type 分流单条作品、主页诊断和实验复盘模板。 |
-| 发完内容不会复盘 | 输出验证指标、决策规则和复盘回填格式，并持久化历史实验。 |
-| 素材版权边界模糊 | 按内容类型提示影视、综艺、音乐、二创等不同使用边界。 |
-
-### 3.3 AI 技术方案
-
-技术实现采用“桌面端采集 + Node 网关 + Python Agent + LangGraph 编排 + 本地/生产数据存储”的架构。
-
-**模型与理解层**
-
-- Python 后端统一负责模型调用、素材理解、视觉降级处理和证据抽取。
-- 单条作品生成 `fact_ledger / work_fact_ledger`。
-- 主页诊断生成 `homepage_evidence_map / homepage_column_plan`。
-- 当视觉模型失败时，不将工具日志、文件名、上传记录或用户请求当作内容证据。
-
-**工作流编排层**
-
-LangGraph 节点包括：
-
-- `intake`：接收用户任务和上下文。
-- `platform`：处理平台线索和账号/作品链接。
-- `assets`：分析截图、录屏、抽帧、OCR / ASR 和上传素材。
-- `evidence_snapshot`：整理证据快照。
-- `decision`：判断任务类型和分析路径。
-- `strategy`：生成增长策略、脚本步骤或栏目方案。
-- `evidence`：生成证据契约和禁止结论。
-- `persist`：持久化任务结果和增长记忆。
-
-**最终回复层**
-
-Node 网关负责用户可见输出：
-
-- 优先展示 Python 上游结构化结果。
-- 过滤内部异常、运行环境信息、英文 key、调试字段和乱码。
-- 按任务类型输出不同中文结构。
-- 保留证据边界、验证指标和复盘入口。
-
-### 3.4 关键结构化字段
-
-**证据契约 `evidence_contract`**
-
-```json
-{
-  "direct_evidence": [],
-  "inferred_claims": [],
-  "low_confidence_claims": [],
-  "missing_evidence": [],
-  "forbidden_claims": []
-}
-```
-
-**单条作品事实账本 `fact_ledger`**
-
-```json
-{
-  "visible_facts": [],
-  "audio_facts": [],
-  "text_facts": [],
-  "possible_source": {
-    "name": "",
-    "confidence": "high | medium | low | unknown",
-    "evidence": []
-  },
-  "characters_or_people": [],
-  "timeline": [],
-  "growth_hooks": [],
-  "limitations": []
-}
-```
-
-**主页证据图 `homepage_evidence_map`**
-
-```json
-{
-  "profile_signals": {},
-  "visible_work_samples": [],
-  "content_patterns": [],
-  "profile_problems": [],
-  "missing_evidence": []
-}
-```
-
-**策略输出 `script_steps / homepage_column_plan`**
-
-```json
-{
-  "script_steps": [],
-  "homepage_column_plan": [],
-  "growth_hypothesis": "",
-  "test_action": "",
-  "validation_metrics": [],
-  "decision_rules": [],
-  "review_template": ""
-}
-```
+| Generates general advice | Generates evidence-grounded decisions |
+| Uses fixed short-video templates | Uses current material and visible signals |
+| Mixes facts and guesses | Separates evidence, inference, low confidence, and missing evidence |
+| May expose internal fields | Filters internal keys, debug text, connector state, and runtime logs |
+| Treats all tasks similarly | Separates single-video analysis, homepage diagnosis, and degraded-evidence fallback |
+| Ignores usage boundaries | Adds conservative copyright and material-use guidance |
 
 ---
 
-## 模块四：加分项
+## Module 3: AI-Native Capabilities
 
-### 4.1 落地可行性
+### Core AI Capabilities
 
-项目已具备完整工程链路：
+Mimo combines multimodal understanding, structured evidence extraction, workflow routing, and guarded final-response generation.
 
-- 桌面端：Tauri + React，支持桌宠 UI、截图、录屏、上传素材和 Agent 面板展示。
-- Node 网关：负责桌面端与 Python 后端之间的 API 适配、媒体预处理、视频抽帧、任务轮询和最终回复组装。
-- Python 后端：负责模型调用、素材分析、策略生成、证据契约、任务持久化和增长记忆。
-- LangGraph：负责 KOC Agent 工作流编排。
-- 数据层：支持本地数据目录和生产数据库 schema。
+Core capabilities:
 
-推荐验证命令：
+- **Multimodal understanding**: screenshots, recordings, sampled frames, OCR, ASR, titles, tags, and browser-visible text.
+- **Fact ledger generation**: visible facts, audio facts, text facts, sparse timeline, growth hooks, and limitations.
+- **Content-type routing**: media clip, platform-native content, tutorial, performance, gameplay, vlog, product review, knowledge content, or unknown.
+- **Homepage evidence mapping**: profile signals, visible work samples, content patterns, profile problems, and missing evidence.
+- **Evidence contract generation**: direct evidence, inferred claims, low-confidence claims, missing evidence, and forbidden claims.
+- **Guarded final reply**: Chinese user-facing output with no internal English keys or debug leakage.
+
+### How AI Solves the Pain Points
+
+| Pain point | Mimo's AI approach |
+| --- | --- |
+| Evidence is scattered | Normalize evidence into structured ledgers and contracts. |
+| Advice is generic | Require each script or column suggestion to cite evidence. |
+| Claims are overstated | Block unsupported claims through forbidden-claim rules. |
+| Homepage and video tasks are mixed | Route by task type and use different final reply templates. |
+| Vision may fail | Use conservative degradation and state missing evidence. |
+| Internal logs can leak | Strip runtime context, file names, upload metadata, stack traces, and connector state. |
+
+### Technical Design
+
+**Model and analysis layer**
+
+- Python owns model calls and structured material understanding.
+- Single-video analysis produces `fact_ledger`.
+- Homepage diagnosis produces `homepage_evidence_map` and, when evidence is sufficient, `homepage_column_plan`.
+- Operational metadata is classified separately from content evidence.
+
+**Workflow layer**
+
+LangGraph handles:
+
+- task intake;
+- platform context;
+- asset analysis;
+- evidence snapshot;
+- decision routing;
+- strategy generation;
+- evidence contract generation;
+- persistence.
+
+**Final reply layer**
+
+The Node gateway:
+
+- reads Python strategy results;
+- formats task-aware Chinese replies;
+- filters internal errors and debug keys;
+- removes unsupported generic script templates;
+- preserves evidence boundaries.
+
+---
+
+## Module 4: Optional Bonus Content
+
+### Implementation Feasibility
+
+Mimo is already structured as a runnable local application:
+
+- Tauri + React desktop shell;
+- Node/Express gateway;
+- Python backend;
+- LangGraph workflow;
+- local data directory;
+- production database schema;
+- regression scripts for evidence contracts, dynamic scripts, homepage evidence, and final replies.
+
+Recommended validation commands:
 
 ```powershell
 python -m compileall koc_backend koc_graph
@@ -284,73 +225,37 @@ python scripts/test_koc_homepage_evidence_pipeline.py
 npm.cmd --workspace apps/server run build
 node --import tsx apps/server/test/test-koc-final-reply.ts
 node --import tsx apps/server/test/test-koc-e2e-mock-job.ts
-npm.cmd --workspace apps/desktop run build
 npm.cmd run self-check
 ```
 
-### 4.2 商业化思考
+### Commercial Potential
 
-项目可以面向个人创作者、MCN、内容团队和品牌自媒体提供分层服务：
+Mimo can be packaged for:
 
-| 版本 | 目标用户 | 商业模式 |
-| --- | --- | --- |
-| 免费版 | 个人创作者 | 限量单条作品分析和主页诊断，形成用户入口。 |
-| Pro 版 | 高频 KOC / 达人 | 按月订阅，提供更多素材分析、历史记忆、复盘记录和导出报告。 |
-| Team 版 | MCN / 内容团队 | 多账号管理、团队协作、批量复盘、账号矩阵诊断和数据看板。 |
-| 定制版 | 品牌 / 机构 | 接入内部素材库、私有模型、私有数据库和定制增长指标。 |
+- individual creators who need lightweight content diagnosis;
+- KOC operators who need repeatable evidence-based workflows;
+- MCN teams that want shared analysis standards;
+- brand content teams that need conservative material-use boundaries.
 
-### 4.3 竞争优势
+Possible business models:
 
-- **证据优先**：不是“看起来完整”的建议，而是每个判断都能回到证据来源。
-- **任务分流清晰**：单条作品、主页诊断和发布后复盘使用不同模板与边界。
-- **保守但可执行**：证据不足时不会硬编栏目或脚本，而是给补证据动作。
-- **增长闭环完整**：不仅给建议，还要求验证指标和复盘回填。
-- **桌面端贴近真实场景**：用户可以直接对当前屏幕、当前视频和当前主页进行分析。
-- **适合本地优先与隐私场景**：运行数据、上传素材和任务记录可在本地保存，并可扩展到生产数据库。
+- desktop pro license;
+- monthly subscription for model-backed diagnosis;
+- team workspace and account management;
+- private deployment for agencies or brands.
 
-### 4.4 风险与边界
+### Risks and Boundaries
 
-- 不替代平台后台数据。缺少 3 秒留存、完播率、主页点击率、关注转化等指标时，只能做保守判断。
-- 不替代版权审查。涉及影视、综艺、音乐、二创素材时，需要关注授权、平台规则和引用边界。
-- 不把单条作品直接上升为账号长期方向。
-- 不将用户请求、工具日志、文件名、运行环境或内部错误当作内容证据。
-- 不承诺“必爆”“必涨粉”或“平台已经验证某方向”。
+Mimo does not:
+
+- guarantee virality;
+- claim platform recommendation behavior without backend data;
+- treat a single video as a confirmed long-term account direction;
+- encourage full reuploading of copyrighted materials;
+- use file names, upload logs, browser processes, or internal errors as content evidence.
 
 ---
 
-## 附录：用户可见最终回复标准
+## One-Sentence Summary
 
-### 单条作品分析
-
-1. 有效结论
-2. 证据依据
-3. 当前问题
-4. 下一步动作
-5. 建议脚本
-6. 验证与复盘
-7. 证据边界
-
-### 主页诊断
-
-1. 有效结论
-2. 证据依据
-3. 当前问题
-4. 下一步动作
-5. 栏目测试方案
-6. 验证与复盘
-7. 证据边界
-
-### 实验复盘
-
-1. 上次实验结果
-2. 实验是否有效
-3. 证据依据
-4. 下一步继续还是调整
-5. 验证与复盘
-6. 证据边界
-
----
-
-## 附录：一句话总结
-
-KOC LangGraph Agent 的核心价值，是把创作者手里的截图、录屏、标题、字幕、主页线索和发布数据，转化为有证据边界的增长实验，而不是输出泛化模板或未经验证的增长结论。
+Mimo helps creators turn authorized short-form content materials into evidence-grounded growth experiments, while keeping uncertainty, missing evidence, and content-use boundaries visible.

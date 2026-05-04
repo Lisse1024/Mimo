@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
-  "productName": "DeskMate",
+  "productName": "Mimo",
   "version": "0.1.0",
-  "identifier": "com.example.deskmate",
+  "identifier": "com.lisse1024.mimo",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "DeskMate",
+        "title": "Mimo",
         "width": 320,
         "height": 460,
         "resizable": false,
