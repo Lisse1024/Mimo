@@ -6,6 +6,67 @@ from typing import Any
 from .catalog import PLATFORM_LIBRARY
 from .video_context import is_profile_share_text
 
+HOMEPAGE_CONTENT_SOURCE_TYPES = {
+    "profile_visible_name",
+    "profile_bio",
+    "profile_stats",
+    "profile_visible_text",
+    "work_title",
+    "work_cover_text",
+    "work_visible_metric",
+    "work_grid_visual",
+    "ocr_text",
+    "browser_page_visible_text",
+    "user_provided_homepage_description",
+}
+
+HOMEPAGE_FORBIDDEN_SOURCE_TYPES = {
+    "local_user_default",
+    "profile_default_value",
+    "runtime_context",
+    "active_window_process",
+    "active_window_title",
+    "browser_process",
+    "file_name",
+    "mime_type",
+    "file_size",
+    "upload_metadata",
+    "asset_count",
+    "screenshot_debug",
+    "tool_trace",
+    "internal_error",
+    "platform_connector_status",
+    "backend_status",
+    "debug_message",
+}
+
+HOMEPAGE_FORBIDDEN_TEXT_RE = re.compile(
+    r"本地用户|待确认账号|unknown\b|screen\b|image/(?:png|jpe?g|webp)|video/mp4|"
+    r"\.(?:png|jpe?g|webp|mp4)\b|当前窗口|窗口标题|窗口进程|process|"
+    r"msedgewebview2|chrome|electron|tauri|browser|upload|asset|mime|文件大小|"
+    r"用户档案|browser hint|platform hint|runtime|debug|Traceback|ReferenceError|"
+    r"TypeError|undefined|stack",
+    flags=re.I,
+)
+
+
+def _is_homepage_content_text(text: Any) -> bool:
+    value = re.sub(r"\s+", " ", str(text or "")).strip()
+    if not (2 <= len(value) <= 220):
+        return False
+    if HOMEPAGE_FORBIDDEN_TEXT_RE.search(value):
+        return False
+    return True
+
+
+def _homepage_evidence_item(source_type: str, text: Any) -> dict[str, str] | None:
+    if source_type not in HOMEPAGE_CONTENT_SOURCE_TYPES:
+        return None
+    value = re.sub(r"\s+", " ", str(text or "")).strip(" -:\uff1a\t")
+    if not _is_homepage_content_text(value):
+        return None
+    return {"source_type": source_type, "text": value[:220]}
+
 def platform_identity_snapshot(platform: str, account_id: str, work_links: list[dict[str, Any]]) -> dict[str, Any]:
     account_id = account_id.strip()[:500]
     has_homepage_link = account_id.startswith(("http://", "https://"))
@@ -109,6 +170,8 @@ def infer_homepage_content_categories(text: str) -> list[str]:
     return candidates
 
 def homepage_ocr_text(profile: dict[str, Any], tool_registry: Any | None = None, tool_runs: list[dict[str, Any]] | None = None) -> tuple[str, list[str]]:
+    from .assets import resolve_safe_path, run_ocr_for_image
+
     chunks: list[str] = []
     notes: list[str] = []
     for asset in profile.get("asset_files", []):
@@ -272,33 +335,44 @@ def _text_list(value: Any, limit: int = 8) -> list[str]:
 
 
 
-def _homepage_source_lines(profile: dict[str, Any], asset_analysis: dict[str, Any], limit: int = 24) -> list[str]:
+def _homepage_source_items(profile: dict[str, Any], asset_analysis: dict[str, Any], limit: int = 24) -> list[dict[str, str]]:
     observed = profile.get("platform_observed_metrics") if isinstance(profile.get("platform_observed_metrics"), dict) else {}
     evidence_facts = profile.get("evidence_facts") if isinstance(profile.get("evidence_facts"), list) else []
-    chunks: list[Any] = [
-        profile.get("account_id"),
-        profile.get("nickname"),
-        profile.get("bio"),
-        profile.get("description"),
-        profile.get("desktop_context"),
-        profile.get("asset_notes"),
-        profile.get("user_request"),
-        json.dumps(observed, ensure_ascii=False),
-        asset_analysis.get("asset_summary"),
-        asset_analysis.get("evidence"),
-        asset_analysis.get("homepage_diagnosis"),
-        asset_analysis.get("content_opportunities"),
-        asset_analysis.get("visual_style"),
-        evidence_facts,
+    chunks: list[tuple[str, Any]] = [
+        ("profile_default_value", profile.get("account_id")),
+        ("profile_visible_name", profile.get("nickname")),
+        ("profile_bio", profile.get("bio") or profile.get("description")),
+        ("runtime_context", profile.get("desktop_context")),
+        ("upload_metadata", profile.get("asset_notes")),
+        ("task_instruction", profile.get("user_request")),
+        ("profile_stats", json.dumps(observed, ensure_ascii=False) if observed else ""),
     ]
-    lines: list[str] = []
-    for chunk in chunks:
+    for item in evidence_facts:
+        if isinstance(item, dict):
+            chunks.append((str(item.get("source_type") or ""), item.get("text") or item.get("value") or item.get("content") or ""))
+        else:
+            chunks.append(("profile_visible_text", item))
+    items: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for source_type, chunk in chunks:
+        if source_type not in HOMEPAGE_CONTENT_SOURCE_TYPES:
+            continue
         for item in _text_list(chunk, limit):
             for part in re.split(r"[\n\r;。！？.!?]+", item):
-                clean = re.sub(r"\s+", " ", part).strip(" -:\uff1a\t")
-                if 4 <= len(clean) <= 120 and not re.search(r"Traceback|ReferenceError|TypeError|undefined|stack", clean, flags=re.I):
-                    lines.append(clean)
-    return _text_list(lines, limit)
+                evidence_item = _homepage_evidence_item(source_type, part)
+                if not evidence_item:
+                    continue
+                text = evidence_item["text"]
+                if 2 <= len(text) <= 120 and text not in seen:
+                    seen.add(text)
+                    items.append(evidence_item)
+                if len(items) >= limit:
+                    return items
+    return items
+
+
+def _homepage_source_lines(profile: dict[str, Any], asset_analysis: dict[str, Any], limit: int = 24) -> list[str]:
+    return [item["text"] for item in _homepage_source_items(profile, asset_analysis, limit)]
 
 
 def _pattern_name_from_evidence(line: str) -> str:
@@ -312,7 +386,8 @@ def _pattern_name_from_evidence(line: str) -> str:
 def build_homepage_evidence_map(profile: dict[str, Any], asset_analysis: dict[str, Any]) -> dict[str, Any]:
     observed = profile.get("platform_observed_metrics") if isinstance(profile.get("platform_observed_metrics"), dict) else {}
     counts = observed.get("counts") if isinstance(observed.get("counts"), dict) else {}
-    source_lines = _homepage_source_lines(profile, asset_analysis)
+    source_items = _homepage_source_items(profile, asset_analysis)
+    source_lines = [item["text"] for item in source_items]
     summary = str(asset_analysis.get("asset_summary", ""))
 
     visible_samples = [
@@ -326,22 +401,28 @@ def build_homepage_evidence_map(profile: dict[str, Any], asset_analysis: dict[st
         for item in source_lines[:8]
     ]
 
-    grouped: dict[str, list[str]] = {}
-    for line in source_lines:
+    grouped: dict[str, list[dict[str, str]]] = {}
+    for item in source_items:
+        line = item["text"]
         name = _pattern_name_from_evidence(line)
         grouped.setdefault(name, [])
-        if line not in grouped[name]:
-            grouped[name].append(line)
+        if all(existing.get("text") != line for existing in grouped[name]):
+            grouped[name].append(item)
 
     patterns: list[dict[str, Any]] = []
     for name, evidence_items in grouped.items():
         if not evidence_items:
             continue
+        evidence_texts = [item["text"] for item in evidence_items if item.get("source_type") in HOMEPAGE_CONTENT_SOURCE_TYPES and _is_homepage_content_text(item.get("text"))]
+        source_types = sorted({item["source_type"] for item in evidence_items if item.get("source_type") in HOMEPAGE_CONTENT_SOURCE_TYPES})
+        if not evidence_texts or not source_types or not _is_homepage_content_text(name):
+            continue
         repeat_count = len(evidence_items)
         patterns.append(
             {
                 "pattern_name": name,
-                "evidence": _text_list(evidence_items, 5),
+                "evidence": _text_list(evidence_texts, 5),
+                "source_types": source_types,
                 "repeat_count": repeat_count,
                 "surface_strength": "high" if repeat_count >= 3 else "medium" if repeat_count == 2 else "low",
                 "why_it_matters": "\u8be5\u6a21\u5f0f\u6765\u81ea\u5f53\u524d\u4e3b\u9875\u53ef\u89c1\u6587\u672c\u3001\u6807\u9898\u3001\u5c01\u9762\u3001\u7b80\u4ecb\u6216\u7528\u6237\u63cf\u8ff0\uff0c\u53ef\u4f5c\u4e3a\u680f\u76ee\u5b9e\u9a8c\u5019\u9009\uff0c\u4f46\u4e0d\u80fd\u66ff\u4ee3\u540e\u53f0\u6570\u636e\u9a8c\u8bc1\u3002",
@@ -357,21 +438,28 @@ def build_homepage_evidence_map(profile: dict[str, Any], asset_analysis: dict[st
 
     return {
         "profile_signals": {
-            "account_name": str(profile.get("account_id") or profile.get("nickname") or ""),
-            "bio": str(profile.get("bio") or profile.get("description") or ""),
+            "account_name": str(profile.get("nickname") or "") if _is_homepage_content_text(profile.get("nickname")) else "",
+            "bio": str(profile.get("bio") or profile.get("description") or "") if _is_homepage_content_text(profile.get("bio") or profile.get("description")) else "",
             "stats": counts,
-            "visible_profile_promise": summary[:220],
+            "visible_profile_promise": summary[:220] if _is_homepage_content_text(summary) else "",
         },
         "visible_work_samples": visible_samples,
         "content_patterns": [item for item in patterns if item.get("evidence")],
-        "profile_problems": _text_list(asset_analysis.get("homepage_diagnosis"), 4),
+        "profile_problems": [item for item in _text_list(asset_analysis.get("homepage_diagnosis"), 4) if _is_homepage_content_text(item)],
         "missing_evidence": missing[:8],
     }
 
 
 def build_homepage_column_plan(homepage_evidence_map: dict[str, Any]) -> tuple[list[dict[str, Any]], str]:
     patterns = homepage_evidence_map.get("content_patterns") if isinstance(homepage_evidence_map.get("content_patterns"), list) else []
-    valid_patterns = [item for item in patterns if isinstance(item, dict) and item.get("pattern_name") and item.get("evidence")]
+    valid_patterns = [
+        item
+        for item in patterns
+        if isinstance(item, dict)
+        and item.get("pattern_name")
+        and _is_homepage_content_text(item.get("pattern_name"))
+        and any(_is_homepage_content_text(text) for text in _text_list(item.get("evidence"), 5))
+    ]
     if not valid_patterns:
         return [], "insufficient_evidence"
 
@@ -381,7 +469,7 @@ def build_homepage_column_plan(homepage_evidence_map: dict[str, Any]) -> tuple[l
 
     plans: list[dict[str, Any]] = []
     for pattern in specific_patterns[:3]:
-        evidence_basis = _text_list(pattern.get("evidence"), 5)
+        evidence_basis = [item for item in _text_list(pattern.get("evidence"), 5) if _is_homepage_content_text(item)]
         if not evidence_basis:
             continue
         title = str(pattern.get("pattern_name", "")).strip()[:40]
@@ -443,6 +531,8 @@ def infer_profile_task_intent(profile: dict[str, Any]) -> str:
 
 def normalize_task_intent(value: Any, fallback_profile: dict[str, Any] | None = None) -> str:
     raw = str(value or "").strip()
+    if raw in {"experiment_review", "growth_review", "review_backfill", "homepage_comparison_review"}:
+        return "experiment_review"
     if raw in {"single_work_analysis", "current_video_analysis", "uploaded_video_analysis"}:
         return "single_work_analysis"
     if raw in {"account_growth_diagnosis", "account_diagnosis", "homepage_screenshot_analysis", "profile_review"}:

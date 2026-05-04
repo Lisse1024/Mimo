@@ -12,6 +12,7 @@ from .profiles import load_store, profile_for_client, save_store
 from .workspace_service import (
     generate_calendar,
     generate_post_pack,
+    record_experiment_review_memory,
     generate_review,
     generate_strategy,
     update_task_status,
@@ -149,6 +150,10 @@ class Handler(BaseHTTPRequestHandler):
 
             if route == "/api/review":
                 json_response(self, 200, generate_review(store, payload.get("profile_id", ""), payload))
+                return
+
+            if route == "/api/experiment-review-memory":
+                json_response(self, 200, record_experiment_review_memory(store, payload.get("profile_id", ""), payload))
                 return
 
             if route == "/api/tasks/update":

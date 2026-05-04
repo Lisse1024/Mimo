@@ -55,6 +55,18 @@ def validate_profile(payload: dict[str, Any]) -> dict[str, Any]:
         payload.get("result_mode") or payload.get("task_intent"),
         fallback_intent_profile,
     )
+    experiment_review_map = payload.get("experiment_review_map", {})
+    if not isinstance(experiment_review_map, dict):
+        experiment_review_map = {}
+    experiment_reviews = []
+    if task_intent == "experiment_review" and experiment_review_map:
+        experiment_reviews.append(
+            {
+                "source": "user_backfill",
+                "review_map": experiment_review_map,
+                "created_at": created_at,
+            }
+        )
 
     return {
         "id": profile_id,
@@ -102,6 +114,7 @@ def validate_profile(payload: dict[str, Any]) -> dict[str, Any]:
                 }
             ],
             "experiments": [],
+            "experiment_reviews": experiment_reviews,
             "effective_patterns": [],
             "ineffective_patterns": [],
             "last_strategy_updated_at": "",

@@ -34,6 +34,8 @@ export interface KocExperimentMemory {
   metrics?: string[];
   reviewedAt?: number;
   reviewMetrics?: Record<string, unknown>;
+  reviewMap?: Record<string, unknown>;
+  nextAction?: string;
   createdFromRunId?: string;
 }
 
@@ -605,6 +607,9 @@ export function appendKocRunToMemory(
   if (!isTerminalRunStatus(run.status)) {
     return memory;
   }
+  if (run.jobId && memory.runs.some((item) => item.jobId === run.jobId && isTerminalRunStatus(item.status))) {
+    return memory;
+  }
   const nextRun: KocMemoryRun = {
     id: `run-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     at: Date.now(),
@@ -613,7 +618,7 @@ export function appendKocRunToMemory(
     evidenceGaps: run.evidenceGaps || extractEvidenceGaps(run),
     reusableLearnings: run.reusableLearnings || deriveReusableLearnings(run),
   };
-  const experiment = deriveExperiment(nextRun);
+  const experiment = nextRun.experiment || deriveExperiment(nextRun);
   if (experiment) nextRun.experiment = experiment;
   memory.runs.push(nextRun);
   if (experiment) memory.experiments.push(experiment);
@@ -636,6 +641,9 @@ export function appendKocRunToMemory(
   }
   if (/缺少|失败|不足|超时|failed|degraded|低置信/i.test(run.resultSummary)) {
     memory.openQuestions = unique([...memory.openQuestions, ...(nextRun.evidenceGaps || []), compactText(run.resultSummary, 120)]).slice(-20);
+  }
+  if (nextRun.taskType === "experiment_review") {
+    updateMemoryAfterExperimentReview(memory, nextRun);
   }
   return memory;
 }

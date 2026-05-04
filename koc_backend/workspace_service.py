@@ -218,6 +218,45 @@ def generate_review(store: dict[str, Any], profile_id: str, payload: dict[str, A
     return workspace_payload(store, profile_id)
 
 
+def record_experiment_review_memory(store: dict[str, Any], profile_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    profile = get_profile(store, profile_id)
+    memory = ensure_growth_memory(profile)
+    workspace = store["workspaces"].setdefault(profile_id, {})
+    review_map = payload.get("experiment_review_map", {})
+    if not isinstance(review_map, dict):
+        review_map = {}
+    decision = payload.get("decision", {})
+    if not isinstance(decision, dict):
+        decision = {}
+    result = str(payload.get("result", "")).strip()
+    conclusion = str(payload.get("conclusion", "")).strip()
+    next_action = str(payload.get("next_action", "")).strip()
+    review = {
+        "source": "final_experiment_review",
+        "job_id": str(payload.get("job_id", "")).strip(),
+        "result": result,
+        "conclusion": conclusion,
+        "next_action": next_action,
+        "decision": decision,
+        "review_map": review_map,
+        "created_at": datetime.utcnow().isoformat(),
+    }
+    memory.setdefault("experiment_reviews", []).append(review)
+    memory["experiment_reviews"] = memory["experiment_reviews"][-20:]
+    if conclusion:
+        if result == "positive":
+            memory["effective_patterns"] = append_unique_patterns(memory.get("effective_patterns", []), [conclusion])
+        elif result == "negative":
+            memory["ineffective_patterns"] = append_unique_patterns(memory.get("ineffective_patterns", []), [conclusion])
+        elif result in {"mixed", "unknown"}:
+            memory.setdefault("open_questions", [])
+            memory["open_questions"] = append_unique_patterns(memory.get("open_questions", []), [conclusion])
+    workspace["experiment_review_memory"] = review
+    workspace["updated_at"] = datetime.utcnow().isoformat()
+    save_store(store)
+    return workspace_payload(store, profile_id)
+
+
 def update_task_status(store: dict[str, Any], profile_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     get_profile(store, profile_id)
     workspace = store["workspaces"].get(profile_id, {})

@@ -329,7 +329,7 @@ app.post("/api/koc/experiment/review", async (req, res) => {
 
 app.get("/api/koc/job", async (req, res) => {
   const jobId = String(req.query.job_id || "").trim();
-  const result = await getKocStrategyJobWithTrace(jobId);
+  const result = await getKocStrategyJobWithTrace(jobId, (req as ClientRequest).clientId);
   res.json(result);
 });
 

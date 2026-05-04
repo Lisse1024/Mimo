@@ -7,6 +7,7 @@ def ensure_growth_memory(profile: dict[str, Any]) -> dict[str, Any]:
     memory = profile.setdefault("growth_memory", {})
     memory.setdefault("stage_history", [])
     memory.setdefault("experiments", [])
+    memory.setdefault("experiment_reviews", [])
     memory.setdefault("effective_patterns", [])
     memory.setdefault("ineffective_patterns", [])
     memory.setdefault("last_strategy_updated_at", "")

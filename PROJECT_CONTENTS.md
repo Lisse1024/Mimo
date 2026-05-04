@@ -9,7 +9,7 @@
 当前项目目标是帮助用户完成这些任务：
 
 - 诊断账号主页：基于主页截图、页面可见信息、用户输入和历史记忆，判断账号定位、内容矩阵、主页转粉问题和下一步动作。
-- 拆解单条作品：基于当前刷到的视频录屏、截图、标题标签、抽帧结果和模型视觉分析，输出片源判断、看点、脚本结构、可复刻拍法和验证指标。
+- 拆解单条作品：基于当前刷到的视频录屏、截图、标题标签、抽帧结果、OCR/ASR 和模型视觉分析，先判断内容类型，再输出事实账本、可见钩子、增长机制、动态脚本、验证指标和证据边界。只有影视、综艺、小品、剧集、搬运或二创片段才以“片源判断”作为主框架。
 - 形成 Agent 闭环：不是只给建议，而是输出“证据 -> 判断 -> 动作 -> 验证指标 -> 复盘回填”的可执行链路。
 - 维护增长记忆：记录平台、账号、作品、实验和复盘结果，下一轮分析时作为上下文。
 - 支持桌面交互：通过 Tauri 桌宠界面提供观察、上传素材、分析当前视频、诊断账号、查看过程和下一步动作。
@@ -143,6 +143,7 @@ package.json                  npm workspaces 和统一脚本
 requirements.txt              Python 依赖
 README.md                     原始项目说明
 PROJECT_CONTENTS.md           当前文档
+docs/KOC_AGENT_OUTPUT_CONTRACT.md  KOC 输出契约、证据字段和回归命令
 apps/                         桌面端和 Node 网关
 koc_backend/                  Python KOC 业务后端
 koc_graph/                    LangGraph 工作流节点
@@ -462,7 +463,9 @@ koc_backend/video_understanding.py
 - 识别图片、视频、截图、录屏。
 - 准备视觉模型素材。
 - 构造视频理解 prompt。
-- 抽取片源、人物、剧情、字幕、评论区线索、可复刻结构。
+- 生成单条作品 `fact_ledger` / `work_fact_ledger`，区分 `visible_facts`、`audio_facts`、`text_facts`、`possible_source`、`characters_or_people`、`timeline`、`growth_hooks` 和 `limitations`。
+- 生成 `content_type`、`content_type_confidence` 和 `content_type_evidence`，支持 `platform_native`、`media_clip`、`tutorial`、`performance`、`gameplay`、`vlog`、`product_review`、`knowledge`、`unknown`。
+- 对主页诊断生成 `homepage_evidence_map`，只把主页可见证据写入 `content_patterns`，不把窗口进程、文件名、mime、上传记录或运行环境当成内容模式。
 - 在视觉模型失败时构造保守结果。
 
 ### 9.4 策略与兜底
@@ -482,13 +485,17 @@ koc_backend/homepage_signals.py
 - 使用模型策略或规则策略。
 - 对证据不足的任务输出保守判断。
 - 生成账号定位、内容支柱、增长阶段、动作、KPI、复盘模板。
-- 单条视频分析时避免把单条作品直接上升为账号长期赛道。
+- 单条作品分析时避免把单条作品直接上升为账号长期赛道。
+- 主页诊断的具体栏目方案由 Python 策略层生成 `homepage_column_plan`，每条方案必须有 `evidence_basis`；Node 不再用关键词垂类分类器硬编栏目。
+- 单条作品的动态脚本由 `script_steps` 承载，每一步包含时间段、画面/素材、字幕/口播、目的、证据、置信度和 `growth_reason`。
 
 当前已经修正的一点：
 
 - 当视觉模型降级或字段不完整时，不再固定输出“开头需要让用户立刻知道冲突、反差或情绪点”。
 - 可执行脚本步骤不再固定套“0-3 秒最强冲突 / 4-12 秒补上下文 / 13-25 秒情绪爆点”。
 - 现在会优先从素材摘要、片源、标题、标签、字幕、视频理解中抽取动态看点。
+- 单条作品不再默认走“片源拆解”；教程、演奏、游戏实况、Vlog、知识科普、产品测评等平台原生内容会走“内容类型判断 / 可能赛道 / 增长机制 / 可复用结构”。
+- 主页诊断不再把本地用户、当前窗口进程、浏览器进程名、图片文件名、mime 类型、文件大小、上传素材元信息写进内容模式或栏目方案。
 
 ### 9.5 证据、边界和任务
 
@@ -515,6 +522,26 @@ koc_backend/workspace_service.py
 - 哪些证据降级。
 - 当前结论能不能被说成“后台数据证明”。
 - 哪些只是截图、抽帧、标题、可见文本或模型推断。
+- 单条作品中哪些是内容证据，哪些只是用户请求、工具日志、上传元信息或运行状态。
+- 主页诊断中哪些是主页可见证据，哪些只是窗口标题、进程名、文件名、mime、文件大小、上传记录或 debug 信息。
+
+当前兼容的新证据契约字段：
+
+```text
+direct_evidence
+inferred_claims
+low_confidence_claims
+missing_evidence
+forbidden_claims
+```
+
+旧字段仍保留：
+
+```text
+missing_keys
+degraded_keys
+must_not_claim
+```
 
 ### 9.6 增长记忆
 
@@ -667,18 +694,21 @@ model_calls
   -> 前端把录屏作为 KOCUploadAsset 传给 Node
   -> Node 保存素材并抽帧
   -> Python 保存上传批次
-  -> Python 组装 video_understanding ledger
+  -> Python 组装 video_understanding 和 work_understanding
+  -> 生成 fact_ledger 与 content_type
   -> Kimi 视觉模型分析图片/视频素材
   -> LangGraph 根据证据质量路由
-  -> 输出结论、动作、验证指标和证据边界
+  -> rule_strategy 生成 script_steps、growth_reason、增长实验字段和证据边界
+  -> Node buildFinalReply 中文化、脱敏、去重并输出用户可见回复
 ```
 
 如果视觉模型失败：
 
 - 不应假装看完完整视频。
-- 使用已抽帧、窗口标题、用户输入、标题标签和历史记忆做保守分析。
+- 优先使用已抽帧、OCR、ASR、页面可见文本、标题标签和作品链接做保守分析。
+- 用户请求、平台连接器状态、媒体处理日志、上传素材数量、文件名、工具运行状态和 runtime context 不能进入核心看点或脚本素材。
 - 输出中必须标注证据边界。
-- 可执行内容应标明“待确认片源/低置信”，不能把结论说成后台数据证明。
+- 如果只有运行元信息而没有内容证据，应降级为补证据建议，不能硬生成具体脚本。
 
 ## 14. 前端输出中文化与内部字段清理
 
@@ -694,9 +724,18 @@ visual_asset_analysis      截图/视频视觉分析
 video_timeline             视频抽帧时间线
 single_work_analysis       单条作品拆解
 account_growth_diagnosis   账号增长诊断
+fact_ledger                素材事实账本
+work_fact_ledger           作品事实账本
+script_steps               建议脚本步骤
+caption_or_voiceover       字幕/口播
+growth_reason              增长目的
+homepage_evidence_map      主页证据图
+homepage_column_plan       主页栏目测试方案
+evidence_basis             证据依据
+content_type               内容类型判断
 ```
 
-仍需注意：如果后端新增了内部 key，前端和 `apps/server/src/koc-growth.ts` 的中文化映射也要同步补充。
+仍需注意：如果后端新增了内部 key，前端和 `apps/server/src/koc-growth.ts` 的中文化映射也要同步补充。Node 最终回复层还承担最后一道过滤：不能把英文 key、调试字段、Python/Node 异常、运行环境信息或没有证据支撑的平台机制判断直接展示给用户。
 
 ## 15. 日程、天气和普通桌面助手能力
 
@@ -734,6 +773,61 @@ apps/server/src/index.ts
 - OCR/ASR 可提取内容。
 - 用户发布后手动回填数据。
 
+单条作品中允许进入内容策略的来源包括：
+
+```text
+visual_frame
+ocr_text
+asr_text
+on_screen_text
+title
+caption
+hashtag
+visible_metric
+visible_comment
+page_visible_text
+user_provided_content_description
+```
+
+主页诊断中允许进入 `homepage_evidence_map.content_patterns` 的来源包括：
+
+```text
+profile_visible_name
+profile_bio
+profile_stats
+profile_visible_text
+work_title
+work_cover_text
+work_visible_metric
+work_grid_visual
+ocr_text
+browser_page_visible_text
+user_provided_homepage_description
+```
+
+这些来源不能进入内容策略或栏目方案，只能用于 trace、降级说明或证据边界：
+
+```text
+user_request
+task_instruction
+runtime_context
+platform_connector_status
+media_processing_log
+upload_metadata
+file_name
+mime_type
+file_size
+asset_count
+active_window_process
+active_window_title
+browser_process
+screenshot_debug
+tool_trace
+internal_error
+backend_status
+debug_message
+```
+
 当前缺失或降级时必须提示：
 
 - 平台公开页数据缺失。
@@ -741,6 +835,7 @@ apps/server/src/index.ts
 - 评论区真实数据缺失。
 - 后台完播、留存、转粉数据缺失。
 - 片源、完整剧情、台词、BGM 无法仅凭少量帧确认。
+- 主页截图无法证明平台推荐、限流、转粉效率或账号趋势已经发生变化。
 
 因此输出中不能写：
 
@@ -748,6 +843,8 @@ apps/server/src/index.ts
 - “这条一定能爆”。
 - “完整剧情是……”但实际只看了截图。
 - “评论区都在说……”但没有评论区截图或数据。
+- “平台已经验证某方向”“限流”“转粉停滞”“平台惩罚”，但没有后台数据。
+- 把字幕里对真实人物、历史人物的争议性评价直接写成已验证事实。
 
 合理表述应该是：
 
@@ -756,6 +853,8 @@ apps/server/src/index.ts
 缺失平台后台数据和评论区证据，因此只能先做小样本验证。
 发布后回填 3 秒停留、完播率、评论关键词、收藏和主页点击，再判断模板是否成立。
 ```
+
+涉及真实人物、历史人物、争议评价、道德指控或私生活指控时，应写成“视频字幕声称”“片段叙事将其塑造成”或“画面文本表达为”，不能把素材叙事直接当事实。
 
 ## 17. 当前重要修复记录
 
@@ -769,6 +868,13 @@ apps/server/src/index.ts
 - 证据边界中文化：内部 key 显示为中文证据名称。
 - 前端按钮文案对齐：上传素材、分析当前视频、停止录制并分析、诊断账号。
 - 前端 Agent 闭环展示：增加闭环区，避免只显示过程摘要和风险。
+- 证据契约增强：新增 `direct_evidence`、`inferred_claims`、`low_confidence_claims`、`missing_evidence`、`forbidden_claims`，并保留旧字段兼容。
+- 单条作品事实账本：新增 `fact_ledger` / `work_fact_ledger`，并用 source_type 区分内容证据与运行元信息。
+- 单条作品内容类型分流：新增 `content_type`，只有 `media_clip` 才默认使用片源判断；教程、演奏、游戏实况、Vlog、知识科普、产品测评等走内容类型和增长机制拆解。
+- 动态脚本增强：`script_steps` 每一步必须绑定内容证据，并补充 `growth_reason`，解释为什么影响停留、收藏、评论、完播或主页点击。
+- 主页诊断前移到 Python 策略层：`homepage_signals.py` 生成 `homepage_evidence_map` 和 `homepage_column_plan`，Node 只负责展示、过滤、脱敏和降级。
+- 主页证据污染修复：窗口进程、窗口标题、浏览器进程、图片文件名、mime、文件大小、上传元信息、本地用户默认值不再进入主页内容模式或栏目方案。
+- Node 最终回复分流：`homepage_review/account_diagnosis` 使用“栏目测试方案”，`single_work_analysis` 使用“建议脚本”，并过滤内部 key、异常、运行环境信息和平台机制强判断。
 
 ## 18. 继续开发建议
 
@@ -779,8 +885,8 @@ apps/server/src/index.ts
 3. 给截图/录屏增加端到端测试或至少保存调试 metadata，避免坐标问题回归。
 4. 给 Kimi 视觉失败增加更明确的用户态错误分类：过载、超时、key 无效、模型不支持视频、请求体过大。
 5. 把前端中文化映射和后端证据 key 映射集中管理。
-6. 对 `rule_strategy.py` 做模块拆分，尤其是单条作品、主页链接、账号诊断三个分支。
-7. 为 `apps/server/src/koc-growth.ts` 的最终回复生成补充单元测试，防止固定模板和内部字段泄漏回归。
+6. 对 `rule_strategy.py` 做模块拆分，尤其是单条作品、主页链接、账号诊断三个分支；优先收敛旧的 music/game 单条作品早期分支，让它们统一经过 `content_type + fact_ledger + script_steps/growth_reason`。
+7. 持续补充 `apps/server/src/koc-growth.ts` 的最终回复测试，防止固定模板、运行元信息、内部字段和无证据平台机制判断泄漏回归。
 8. 逐步接入 PostgreSQL + pgvector 的生产数据层。
 
 ## 19. 快速排查清单
@@ -809,10 +915,20 @@ apps/server/src/index.ts
 
 - 看 `workspace.asset_analysis.status`。
 - 看是否有视频抽帧。
+- 看 `workspace.asset_analysis.fact_ledger` 或 `work_understanding.fact_ledger` 是否有真实 `visible_facts/text_facts/audio_facts/growth_hooks`。
+- 看 `workspace.asset_analysis.work_understanding.content_type` 是否误判为 `media_clip`。
 - 看 `advisor_summary.one_sentence_diagnosis` 是否来自固定兜底。
-- 看 `evidence_contract.missing_keys` 和 `degraded_keys`。
+- 看 `strategy.script_steps` 是否有具体 evidence 和 `growth_reason`。
+- 看 `evidence_contract.missing_keys`、`degraded_keys`、`missing_evidence` 和 `forbidden_claims`。
 - 看前端是否把内部字段清理成中文。
+
+如果主页诊断又混入运行信息：
+
+- 看 `workspace.strategy.homepage_evidence_map.content_patterns`。
+- 看 `workspace.strategy.homepage_column_plan[*].evidence_basis` 是否只来自主页可见证据。
+- 不应出现本地用户、窗口标题、窗口进程、浏览器进程、文件名、mime、文件大小、upload、asset、runtime、debug。
+- 如果只剩这些运行信息，应返回 `homepage_column_plan_status = insufficient_evidence`。
 
 ## 20. 项目当前一句话总结
 
-这是一个以 LangGraph 为控制流、以桌面截图/录屏和 Kimi 视觉分析为证据入口、以 KOC 内容增长建议和复盘记忆为目标的桌面 Agent。它当前已经具备从“用户看到一个作品或主页”到“收集证据、分析、给出动作、设置验证指标、等待复盘回填”的闭环雏形，但仍需要继续强化组件拆分、测试覆盖、视觉失败兜底和生产数据层。
+这是一个以 LangGraph 为控制流、以桌面截图/录屏、OCR/ASR、抽帧和 Kimi 视觉分析为证据入口、以 KOC 内容增长实验和复盘记忆为目标的桌面 Agent。它当前已经具备从“用户看到一个作品或主页”到“收集证据、区分内容证据和运行元信息、生成事实账本/主页证据图、输出动态脚本或栏目实验、设置验证指标、等待复盘回填”的闭环雏形，但仍需要继续强化组件拆分、测试覆盖、视觉失败兜底和生产数据层。
