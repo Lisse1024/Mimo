@@ -224,14 +224,16 @@ npm.cmd run self-check
 
 For the quickest review path:
 
-1. Prepare `.env` with a temporary demo model key.
-2. Run `npm run dev`.
-3. Open the desktop agent.
+1. Download the GitHub Release review ZIP.
+2. Install `Mimo_0.1.0_x64-setup.exe`.
+3. Run `START_MIMO_REVIEW.ps1` from the extracted review package.
 4. Use an authorized screenshot, screen recording, or uploaded clip.
 5. Ask for either current-video analysis or homepage diagnosis.
 6. Check whether the response cites evidence, avoids unsupported claims, and proposes a measurable next action.
 
 The release ZIP can include a reviewer-only `.env` file for convenience, but `.env` is intentionally excluded from Git history.
+
+See [Reviewer Quickstart](docs/REVIEWER_QUICKSTART.md) for the full Windows review flow.
 
 ## Documentation
 
