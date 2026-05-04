@@ -12,15 +12,18 @@ if ((Split-Path -Leaf $releaseRoot) -eq "scripts") {
 $sourceZip = Join-Path $releaseRoot "Mimo-v0.1.0-source.zip"
 $sourceDir = Join-Path $releaseRoot "Mimo-source"
 $envFile = Join-Path $releaseRoot ".env"
+$repoUrl = "https://github.com/Lisse1024/Mimo.git"
 
 Write-Host "Mimo reviewer launcher" -ForegroundColor Cyan
 
 if (!(Test-Path $sourceDir)) {
-  if (!(Test-Path $sourceZip)) {
-    throw "Missing Mimo-v0.1.0-source.zip next to this script."
+  if (Test-Path $sourceZip) {
+    Write-Host "Extracting source package..."
+    Expand-Archive -Path $sourceZip -DestinationPath $sourceDir -Force
+  } else {
+    Write-Host "Source package not found. Cloning Mimo from GitHub..."
+    git clone $repoUrl $sourceDir
   }
-  Write-Host "Extracting source package..."
-  Expand-Archive -Path $sourceZip -DestinationPath $sourceDir -Force
 }
 
 if (Test-Path $envFile) {
