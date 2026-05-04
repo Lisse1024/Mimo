@@ -20,6 +20,8 @@ data/debug_video_frames*/
 data/uploads/
 data/asr/
 release/
+docs/
+demo/
 
 # Live2D editor project/source files are large and not needed at runtime.
 *.cmo3

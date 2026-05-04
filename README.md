@@ -233,14 +233,6 @@ For the quickest review path:
 
 The release ZIP can include a reviewer-only `.env` file for convenience, but `.env` is intentionally excluded from Git history.
 
-See [Reviewer Quickstart](docs/REVIEWER_QUICKSTART.md) for the full Windows review flow.
-
-## Documentation
-
-- [KOC Agent Product Description](docs/KOC_AGENT_PRODUCT_DESCRIPTION.md)
-- [KOC Agent Output Contract](docs/KOC_AGENT_OUTPUT_CONTRACT.md)
-- [Project Contents](PROJECT_CONTENTS.md)
-
 ## Repository
 
 ```text
